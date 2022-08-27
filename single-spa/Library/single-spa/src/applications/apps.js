@@ -26,40 +26,53 @@ import { assign } from "../utils/assign";
 const apps = [];
 
 export function getAppChanges() {
-  const appsToUnload = [],
-    appsToUnmount = [],
-    appsToLoad = [],
-    appsToMount = [];
+  const appsToUnload = [], // 需要被移除的应用
+    appsToUnmount = [], // 需要被卸载的应用
+    appsToLoad = [], // 需要被加载的应用
+    appsToMount = []; // 需要被挂载的应用
 
   // We re-attempt to download applications in LOAD_ERROR after a timeout of 200 milliseconds
   const currentTime = new Date().getTime();
 
   apps.forEach((app) => {
+    // 通过 activeWhen 来判断应用是否应该被激活
     const appShouldBeActive =
       app.status !== SKIP_BECAUSE_BROKEN && shouldBeActive(app);
 
     switch (app.status) {
+      // 需要被加载的应用
       case LOAD_ERROR:
         if (appShouldBeActive && currentTime - app.loadErrorTime >= 200) {
           appsToLoad.push(app);
         }
         break;
+      // 需要被加载的应用
       case NOT_LOADED:
       case LOADING_SOURCE_CODE:
         if (appShouldBeActive) {
           appsToLoad.push(app);
         }
         break;
+      // 未启动
       case NOT_BOOTSTRAPPED:
+      // 未挂载
       case NOT_MOUNTED:
+        // 不应该被激活 且 app是将要被移除的
         if (!appShouldBeActive && getAppUnloadInfo(toName(app))) {
+          // push进需要被移除的应用list中
           appsToUnload.push(app);
         } else if (appShouldBeActive) {
+          // 如果上述条件不满足
+          // 则push进将要被挂载的应用list中
           appsToMount.push(app);
         }
         break;
+      // 挂载的应用
       case MOUNTED:
+        // 判断应用是否是：“应该被激活的应用”
+        // 条件：false
         if (!appShouldBeActive) {
+          // 则push进将要被卸载的应用list中
           appsToUnmount.push(app);
         }
         break;
@@ -67,6 +80,7 @@ export function getAppChanges() {
     }
   });
 
+  // 返回四种状态的应用list
   return { appsToUnload, appsToUnmount, appsToLoad, appsToMount };
 }
 
@@ -88,12 +102,21 @@ export function getAppStatus(appName) {
   return app ? app.status : null;
 }
 
+/**
+ * 注册子应用
+ * @param {*} appNameOrConfig // 简单参数 or 对象参数
+ * 参考文档：https://zh-hans.single-spa.js.org/docs/api#registerapplication
+ * @param {*} appOrLoadApp // 加载函数（返回一个应用 or promise）
+ * @param {*} activeWhen // 激活条件（参数：window.location）
+ * @param {*} customProps // 在生命周期钩子函数执行时会被作为参数传入
+ */
 export function registerApplication(
   appNameOrConfig,
   appOrLoadApp,
   activeWhen,
   customProps
 ) {
+  // 返回格式化好的“子应用”配置
   const registration = sanitizeArguments(
     appNameOrConfig,
     appOrLoadApp,
@@ -101,6 +124,7 @@ export function registerApplication(
     customProps
   );
 
+  // 判断注册的子应用是否重名
   if (getAppNames().indexOf(registration.name) !== -1)
     throw Error(
       formatErrorMessage(
@@ -269,6 +293,10 @@ function validateRegisterWithArguments(
     );
 }
 
+/**
+ * 校验“对象参数”合法性
+ * @param {*} config 
+ */
 export function validateRegisterWithConfig(config) {
   if (Array.isArray(config) || config === null)
     throw Error(
@@ -346,12 +374,21 @@ function validCustomProps(customProps) {
   );
 }
 
+/**
+ * 格式化注册app入参
+ * @param {*} appNameOrConfig 
+ * @param {*} appOrLoadApp 
+ * @param {*} activeWhen 
+ * @param {*} customProps 
+ * @returns 
+ */
 function sanitizeArguments(
   appNameOrConfig,
   appOrLoadApp,
   activeWhen,
   customProps
 ) {
+  // 判断是 “简单参数” 还是 “对象参数”
   const usingObjectAPI = typeof appNameOrConfig === "object";
 
   const registration = {
@@ -362,24 +399,31 @@ function sanitizeArguments(
   };
 
   if (usingObjectAPI) {
+    // 对象参数
+    // 校验“对象”参数合法性
     validateRegisterWithConfig(appNameOrConfig);
+    // 赋值
     registration.name = appNameOrConfig.name;
     registration.loadApp = appNameOrConfig.app;
     registration.activeWhen = appNameOrConfig.activeWhen;
     registration.customProps = appNameOrConfig.customProps;
   } else {
+    // 简单参数
+    // 校验“简单”参数合法性
     validateRegisterWithArguments(
       appNameOrConfig,
       appOrLoadApp,
       activeWhen,
       customProps
     );
+    // 赋值
     registration.name = appNameOrConfig;
     registration.loadApp = appOrLoadApp;
     registration.activeWhen = activeWhen;
     registration.customProps = customProps;
   }
 
+  // 对“loadApp”、“customProps”、“activeWhen”再次分别格式化
   registration.loadApp = sanitizeLoadApp(registration.loadApp);
   registration.customProps = sanitizeCustomProps(registration.customProps);
   registration.activeWhen = sanitizeActiveWhen(registration.activeWhen);
@@ -399,6 +443,13 @@ function sanitizeCustomProps(customProps) {
   return customProps ? customProps : {};
 }
 
+/**
+ * 格式化activeWhen
+ * 最终返回一个 数组
+ * 因为需要使用 Array.some 来进行触发条件的判断（条件有可能是多个）
+ * @param {*} activeWhen 
+ * @returns 
+ */
 function sanitizeActiveWhen(activeWhen) {
   let activeWhenArray = Array.isArray(activeWhen) ? activeWhen : [activeWhen];
   activeWhenArray = activeWhenArray.map((activeWhenOrPath) =>

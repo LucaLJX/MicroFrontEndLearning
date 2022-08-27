@@ -7,6 +7,7 @@ let started = false;
 
 export function start(opts) {
   started = true;
+  // urlRerouteOnly: A boolean that defaults to false. If set to true, calls to history.pushState() and history.replaceState() will not trigger a single-spa reroute unless the client side route was changed.
   if (opts && opts.urlRerouteOnly) {
     setUrlRerouteOnly(opts.urlRerouteOnly);
   }

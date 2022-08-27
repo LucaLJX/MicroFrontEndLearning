@@ -47,6 +47,13 @@ export function removeErrorHandler(handler) {
   return removedSomething;
 }
 
+/**
+ * 格式化拼接报错信息
+ * @param {*} code code码
+ * @param {*} msg 提示msg
+ * @param  {...any} args 其他参数
+ * @returns 
+ */
 export function formatErrorMessage(code, msg, ...args) {
   return `single-spa minified message #${code}: ${
     msg ? msg + " " : ""
@@ -55,6 +62,13 @@ export function formatErrorMessage(code, msg, ...args) {
   }`;
 }
 
+/**
+ * 格式化错误
+ * @param {*} ogErr 
+ * @param {*} appOrParcel 
+ * @param {*} newStatus // 下一个状态，当错误处理完之后，手动更新应用的状态为newStatus
+ * @returns 
+ */
 export function transformErr(ogErr, appOrParcel, newStatus) {
   const errPrefix = `${objectType(appOrParcel)} '${toName(
     appOrParcel

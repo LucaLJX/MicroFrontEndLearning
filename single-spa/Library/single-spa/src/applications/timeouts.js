@@ -5,6 +5,7 @@ import { formatErrorMessage } from "./app-errors";
 
 const defaultWarningMillis = 1000;
 
+// 全局配置-各生命周期超时时间
 const globalTimeoutConfig = {
   bootstrap: {
     millis: 4000,

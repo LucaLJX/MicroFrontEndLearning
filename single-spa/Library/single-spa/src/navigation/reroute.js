@@ -34,8 +34,20 @@ export function triggerAppChange() {
   return reroute();
 }
 
+/**
+ * 拦截路由切换，进行对应操作
+ * @param {*} pendingPromises 
+ * @param {*} eventArguments 
+ * @returns 
+ */
 export function reroute(pendingPromises = [], eventArguments) {
+  // 等待app切换
+  // 如果app正在切换 appChangeUnderway === true
+  // 这个状态会在执行performAppChanges之前置为true，执行结束之后再置为false
   if (appChangeUnderway) {
+    // peopleWaitingOnAppChange
+    // 缓存路由change事件：hashchange、popstate等
+    // 如果用户又多次触发 reroute ，信息保存在 peopleWaitingOnAppChange 中。等本次 reroute 完成时，检查 peopleWaitingOnAppChange 长度，如果大于 0，就调用一次 reroute 批量处理掉。
     return new Promise((resolve, reject) => {
       peopleWaitingOnAppChange.push({
         resolve,
@@ -45,6 +57,7 @@ export function reroute(pendingPromises = [], eventArguments) {
     });
   }
 
+  // 获取四种状态的应用list：将要移除、将要卸载、将要加载、将要挂载
   const {
     appsToUnload,
     appsToUnmount,
@@ -56,6 +69,7 @@ export function reroute(pendingPromises = [], eventArguments) {
     oldUrl = currentUrl,
     newUrl = (currentUrl = window.location.href);
 
+  // 判断是否已经启动
   if (isStarted()) {
     appChangeUnderway = true;
     appsThatChanged = appsToUnload.concat(
@@ -90,6 +104,12 @@ export function reroute(pendingPromises = [], eventArguments) {
     });
   }
 
+  /**
+   * 利用一个立即执行的promise微任务
+   *  v5.5.0 新增的新特性：
+   * 1、"single-spa:before-no-app-change" 和 "single-spa:before-app-change"监听事件
+   * 可以参考：https://zh-hans.single-spa.js.org/docs/api/#custom-events
+   */
   function performAppChanges() {
     return Promise.resolve().then(() => {
       // https://github.com/single-spa/single-spa/issues/545
@@ -121,6 +141,7 @@ export function reroute(pendingPromises = [], eventArguments) {
         return;
       }
 
+      // 
       const unloadPromises = appsToUnload.map(toUnloadPromise);
 
       const unmountUnloadPromises = appsToUnmount
@@ -180,11 +201,20 @@ export function reroute(pendingPromises = [], eventArguments) {
     });
   }
 
+  /**
+   * 停止更新并返回已挂载的应用list
+   * @returns
+   */
   function finishUpAndReturn() {
+    // 获取已挂载的应用list
     const returnValue = getMountedApps();
+    // 将pending状态的所有promise均返回resolve
     pendingPromises.forEach((promise) => promise.resolve(returnValue));
 
     try {
+      // 通过“需要被改变的应用list” appsThatChanged 长度来决定触发事件
+      // 长度：0  ==> single-spa:no-app-change
+      // 长度：≠ 0 ==> single-spa:app-change
       const appChangeEventName =
         appsThatChanged.length === 0
           ? "single-spa:no-app-change"
@@ -192,6 +222,7 @@ export function reroute(pendingPromises = [], eventArguments) {
       window.dispatchEvent(
         new CustomEvent(appChangeEventName, getCustomEventDetail())
       );
+      // 触发路由事件
       window.dispatchEvent(
         new CustomEvent("single-spa:routing-event", getCustomEventDetail())
       );
@@ -225,7 +256,7 @@ export function reroute(pendingPromises = [], eventArguments) {
   }
 
   /* We need to call all event listeners that have been delayed because they were
-   * waiting on single-spa. This includes haschange and popstate events for both
+   * waiting on single-spa. This includes hashchange and popstate events for both
    * the current run of performAppChanges(), but also all of the queued event listeners.
    * We want to call the listeners in the same order as if they had not been delayed by
    * single-spa, which means queued ones first and then the most recent one.
