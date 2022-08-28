@@ -12,9 +12,20 @@ export function validLifecycleFn(fn) {
   }
 }
 
+/**
+ * 返回一个接受props作为参数的函数
+ * 函数执行子应用中的生命周期函数
+ * 并确保生命周期函数返回的是一个promise
+ * @param {*} appOrParcel window.singleSpa 子应用打包后的对象
+ * @param {*} lifecycle string，生命周期名称
+ * @returns 
+ */
 export function flattenFnArray(appOrParcel, lifecycle) {
+  // fns = fn | []
   let fns = appOrParcel[lifecycle] || [];
+  // fns = [fn] | [] 转化成array
   fns = Array.isArray(fns) ? fns : [fns];
+  // 如果为空：有些生命周期子应用未设置，如unload
   if (fns.length === 0) {
     fns = [() => Promise.resolve()];
   }
@@ -23,9 +34,11 @@ export function flattenFnArray(appOrParcel, lifecycle) {
   const name = toName(appOrParcel);
 
   return function (props) {
+    // 返回一个promise链
     return fns.reduce((resultPromise, fn, index) => {
       return resultPromise.then(() => {
         const thisPromise = fn(props);
+        // 执行生命周期函数，传递props，验证返回结果 => 必须为promise
         return smellsLikeAPromise(thisPromise)
           ? thisPromise
           : Promise.reject(
@@ -44,6 +57,7 @@ export function flattenFnArray(appOrParcel, lifecycle) {
   };
 }
 
+// 简单判断是不是promise
 export function smellsLikeAPromise(promise) {
   return (
     promise &&

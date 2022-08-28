@@ -7,6 +7,13 @@ import {
 import { reasonableTime } from "../applications/timeouts.js";
 import { handleAppError, transformErr } from "../applications/app-errors.js";
 
+/**
+ * 初始化app
+ * 更改app.status，并在合理时间内执行bootstrap生命周期函数
+ * @param {*} appOrParcel 
+ * @param {*} hardFail 
+ * @returns 
+ */
 export function toBootstrapPromise(appOrParcel, hardFail) {
   return Promise.resolve().then(() => {
     if (appOrParcel.status !== NOT_BOOTSTRAPPED) {

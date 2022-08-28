@@ -11,6 +11,14 @@ import { toUnmountPromise } from "./unmount.js";
 let beforeFirstMountFired = false;
 let firstMountFired = false;
 
+/**
+ * 挂载app
+ * 执行mount生命周期函数
+ * 更改app.status
+ * @param {*} appOrParcel 
+ * @param {*} hardFail 
+ * @returns 
+ */
 export function toMountPromise(appOrParcel, hardFail) {
   return Promise.resolve().then(() => {
     if (appOrParcel.status !== NOT_MOUNTED) {
@@ -18,6 +26,8 @@ export function toMountPromise(appOrParcel, hardFail) {
     }
 
     if (!beforeFirstMountFired) {
+      // 新增自定义事件：""single-spa:before-first-mount""
+      // 让用户可以进行监听
       window.dispatchEvent(new CustomEvent("single-spa:before-first-mount"));
       beforeFirstMountFired = true;
     }
@@ -27,6 +37,8 @@ export function toMountPromise(appOrParcel, hardFail) {
         appOrParcel.status = MOUNTED;
 
         if (!firstMountFired) {
+          // 新增自定义事件："single-spa:first-mount"
+          // 让用户可以进行监听
           window.dispatchEvent(new CustomEvent("single-spa:first-mount"));
           firstMountFired = true;
         }

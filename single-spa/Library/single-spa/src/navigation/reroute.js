@@ -335,13 +335,16 @@ export function reroute(pendingPromises = [], eventArguments) {
  * https://github.com/single-spa/single-spa/issues/524
  */
 function tryToBootstrapAndMount(app, unmountAllPromise) {
+  // 第一次：true，执行初始化
   if (shouldBeActive(app)) {
+    // 第二次：true，执行挂载
     return toBootstrapPromise(app).then((app) =>
       unmountAllPromise.then(() =>
         shouldBeActive(app) ? toMountPromise(app) : app
       )
     );
   } else {
+    // 卸载
     return unmountAllPromise.then(() => app);
   }
 }

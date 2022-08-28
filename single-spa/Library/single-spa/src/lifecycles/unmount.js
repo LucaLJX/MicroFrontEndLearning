@@ -7,13 +7,23 @@ import {
 import { handleAppError, transformErr } from "../applications/app-errors.js";
 import { reasonableTime } from "../applications/timeouts.js";
 
+/**
+ * 更改状态
+ * 执行unmount生命周期函数
+ * @param {*} appOrParcel 
+ * @param {*} hardFail 
+ * @returns 
+ */
 export function toUnmountPromise(appOrParcel, hardFail) {
   return Promise.resolve().then(() => {
+    // 只有mounted的应用，才可以被卸载
     if (appOrParcel.status !== MOUNTED) {
       return appOrParcel;
     }
+    // 更改状态
     appOrParcel.status = UNMOUNTING;
 
+    // 如果子应用使用了parcels，则需要对其做一定的处理
     const unmountChildrenParcels = Object.keys(
       appOrParcel.parcels
     ).map((parcelId) => appOrParcel.parcels[parcelId].unmountThisParcel());

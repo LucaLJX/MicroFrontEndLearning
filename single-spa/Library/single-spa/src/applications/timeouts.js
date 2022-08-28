@@ -34,6 +34,7 @@ const globalTimeoutConfig = {
   },
 };
 
+// 设置启动超时时间
 export function setBootstrapMaxTime(time, dieOnTimeout, warningMillis) {
   if (typeof time !== "number" || time <= 0) {
     throw Error(
@@ -52,6 +53,7 @@ export function setBootstrapMaxTime(time, dieOnTimeout, warningMillis) {
   };
 }
 
+// 设置挂载超时时间
 export function setMountMaxTime(time, dieOnTimeout, warningMillis) {
   if (typeof time !== "number" || time <= 0) {
     throw Error(
@@ -70,6 +72,7 @@ export function setMountMaxTime(time, dieOnTimeout, warningMillis) {
   };
 }
 
+// 设置卸载超时时间
 export function setUnmountMaxTime(time, dieOnTimeout, warningMillis) {
   if (typeof time !== "number" || time <= 0) {
     throw Error(
@@ -88,6 +91,7 @@ export function setUnmountMaxTime(time, dieOnTimeout, warningMillis) {
   };
 }
 
+// 设置移除应用超时时间
 export function setUnloadMaxTime(time, dieOnTimeout, warningMillis) {
   if (typeof time !== "number" || time <= 0) {
     throw Error(
@@ -106,8 +110,17 @@ export function setUnloadMaxTime(time, dieOnTimeout, warningMillis) {
   };
 }
 
+/**
+ * 生命周期的最大超时时间（执行时间）
+ * 在合理的时间执行生命周期函数，并将执行结果通过promise.resolve出去
+ * @param {*} appOrParcel 
+ * @param {*} lifecycle 
+ * @returns 
+ */
 export function reasonableTime(appOrParcel, lifecycle) {
+  // 获取超时时间
   const timeoutConfig = appOrParcel.timeouts[lifecycle];
+  // 超时警告
   const warningPeriod = timeoutConfig.warningMillis;
   const type = objectType(appOrParcel);
 
@@ -115,6 +128,7 @@ export function reasonableTime(appOrParcel, lifecycle) {
     let finished = false;
     let errored = false;
 
+    // 执行生命周期函数
     appOrParcel[lifecycle](getProps(appOrParcel))
       .then((val) => {
         finished = true;

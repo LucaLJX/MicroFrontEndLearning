@@ -91,12 +91,25 @@ function urlReroute() {
   reroute([], arguments);
 }
 
+/**
+ * 通过装饰器模式
+ * 增强 pushstate 和 replacestate 方法
+ * 除了原生的操作记录，还会调用reroute
+ * @param {*} updateState 
+ * @param {*} methodName 
+ * @returns 
+ */
 function patchedUpdateState(updateState, methodName) {
   return function () {
+    // 当前的 url
     const urlBefore = window.location.href;
+    // pushstate 或者 replacestate 的执行结果
     const result = updateState.apply(this, arguments);
+    // pushstate、replacestate 执行之后 url
     const urlAfter = window.location.href;
 
+    // urlRerouteOnly： true => 这里就不会触发reroute
+    // url 未发生变化，也不会reroute
     if (!urlRerouteOnly || urlBefore !== urlAfter) {
       if (isStarted()) {
         // fire an artificial popstate event once single-spa is started,
@@ -136,30 +149,42 @@ function createPopStateEvent(state, originalMethodName) {
   return evt;
 }
 
+// 监听路由变化
+// 即监听：hashchange、popstate事件，触发自定义urlReroute事件
 if (isInBrowser) {
   // We will trigger an app change for any routing events.
   window.addEventListener("hashchange", urlReroute);
   window.addEventListener("popstate", urlReroute);
 
   // Monkeypatch addEventListener so that we can ensure correct timing
+  /**
+   * 扩展重写原生的 “addEventListener” 和 “removeEventListener” 事件
+   * 每次注册事件和实践处理函数均会将事件和处理函数保存下来，移除的时候也会做对应删除操作
+   */
   const originalAddEventListener = window.addEventListener;
   const originalRemoveEventListener = window.removeEventListener;
   window.addEventListener = function (eventName, fn) {
     if (typeof fn === "function") {
       if (
+        // routingEventsListeningTo = ["hashchange", "popstate"];
+        // 所以只会处理 “hashchange” 和 “popstate” 的事件
         routingEventsListeningTo.indexOf(eventName) >= 0 &&
         !find(capturedEventListeners[eventName], (listener) => listener === fn)
       ) {
+        // 对应函数未被保存 !find(xxx)
+        // 保存处理函数
         capturedEventListeners[eventName].push(fn);
         return;
       }
     }
 
+    // 执行
     return originalAddEventListener.apply(this, arguments);
   };
 
   window.removeEventListener = function (eventName, listenerFn) {
     if (typeof listenerFn === "function") {
+      // 移除对应事件
       if (routingEventsListeningTo.indexOf(eventName) >= 0) {
         capturedEventListeners[eventName] = capturedEventListeners[
           eventName
@@ -171,10 +196,12 @@ if (isInBrowser) {
     return originalRemoveEventListener.apply(this, arguments);
   };
 
+  // 增强 pushState 事件
   window.history.pushState = patchedUpdateState(
     window.history.pushState,
     "pushState"
   );
+  // 增强 replaceState 事件
   window.history.replaceState = patchedUpdateState(
     window.history.replaceState,
     "replaceState"
