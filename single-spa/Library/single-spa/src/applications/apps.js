@@ -201,10 +201,12 @@ export function unloadApplication(appName, opts = { waitForUnmount: false }) {
     );
   }
 
+  // 1. 从appsToUnload列表中获取当前app
   const appUnloadInfo = getAppUnloadInfo(toName(app));
   if (opts && opts.waitForUnmount) {
     // We need to wait for unmount before unloading the app
 
+    // 2. 若当前app为“将被移除的应用”
     if (appUnloadInfo) {
       // Someone else is already waiting for this, too
       return appUnloadInfo.promise;
@@ -237,6 +239,12 @@ export function unloadApplication(appName, opts = { waitForUnmount: false }) {
   }
 }
 
+/**
+ * 链式调用toUnmountPromise和toUnloadPromise，来进行应用的卸载
+ * @param {*} app 
+ * @param {*} resolve 
+ * @param {*} reject 
+ */
 function immediatelyUnloadApp(app, resolve, reject) {
   toUnmountPromise(app)
     .then(toUnloadPromise)
@@ -451,6 +459,7 @@ function sanitizeCustomProps(customProps) {
  * @returns 
  */
 function sanitizeActiveWhen(activeWhen) {
+  // 如果 activeWhen 是一个正则，则转换成函数
   let activeWhenArray = Array.isArray(activeWhen) ? activeWhen : [activeWhen];
   activeWhenArray = activeWhenArray.map((activeWhenOrPath) =>
     typeof activeWhenOrPath === "function"
@@ -462,6 +471,12 @@ function sanitizeActiveWhen(activeWhen) {
     activeWhenArray.some((activeWhen) => activeWhen(location));
 }
 
+/**
+ * 将 正则 格式的activeWhen转换成函数
+ * @param {*} path 
+ * @param {*} exactMatch 
+ * @returns 
+ */
 export function pathToActiveWhen(path, exactMatch) {
   const regex = toDynamicPathValidatorRegex(path, exactMatch);
 
